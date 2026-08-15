@@ -1,4 +1,5 @@
-import "./components.css"; 
+import { useState } from "react";
+import "./components.css";
 
 function Navbar({
   partSearch,
@@ -7,43 +8,58 @@ function Navbar({
   setShowPartSearch,
   partSearchResults,
   openSearchedPart
+
 }) {
+  
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const closeMobileMenu = () => {
+  setMobileMenuOpen(false);
+};
+
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
-    <nav className="navbar">
+   <nav className="navbar">
 
-     <a href="#" className="logo">
-  <span>MAULI</span> AUTOMOBILES
-</a>
+  <a href="#" className="logo">
+    <span>MAULI</span> AUTOMOBILES
+  </a>
 
-      {/* ================= NAV LINKS ================= */}
+  {/* MOBILE MENU BUTTON */}
+  <button
+    type="button"
+    className="mobile-menu-btn"
+    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+  >
+    ☰
+  </button>
 
-      <ul className="nav-links">
+  {/* NAV LINKS */}
+  <ul className={`nav-links ${mobileMenuOpen ? "mobile-open" : ""}`}>
+<li>
+  <a href="#" onClick={closeMobileMenu}>Home</a>
+</li>
 
-        <li>
-          <a href="#">Home</a>
-        </li>
+<li>
+  <a href="#about" onClick={closeMobileMenu}>About</a>
+</li>
 
-        <li>
-          <a href="#about">About</a>
-        </li>
+<li>
+  <a href="#brands" onClick={closeMobileMenu}>Brands</a>
+</li>
 
-        <li>
-          <a href="#brands">Brands</a>
-        </li>
+<li>
+  <a href="#products" onClick={closeMobileMenu}>Products</a>
+</li>
 
-        <li>
-          <a href="#products">Products</a>
-        </li>
+<li>
+  <a href="#gallery" onClick={closeMobileMenu}>Gallery</a>
+</li>
 
-        <li>
-          <a href="#gallery">Gallery</a>
-        </li>
-
-        <li>
-          <a href="#contact">Contact</a>
-        </li>
-
-      </ul>
+<li>
+  <a href="#contact" onClick={closeMobileMenu}>Contact</a>
+</li>
+  </ul>
 
 
       {/* ================= PART SEARCH ================= */}
