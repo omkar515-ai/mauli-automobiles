@@ -1,7 +1,11 @@
 import "./App.css";
 import Navbar from "./components/Navbar";
+import ProductCard from "./components/ProductCard";
+import ProductModal from "./components/ProductModal";
+import GalleryCard from "./components/GalleryCard";
+import GalleryLightbox from "./components/GalleryLightbox";
 
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 
 import hondaLogo from "./assets/logo/honda.webp";
 import heroLogo from "./assets/logo/hero.png";
@@ -38,8 +42,8 @@ import {
 
 import { FaWhatsapp } from "react-icons/fa";
 
+// ===== Moved outside App() so these are created once, not on every render =====
 
-function App() {
 const galleryImages = [
   {
     src: img17,
@@ -117,6 +121,7 @@ const galleryImages = [
     category: "Showroom",
   },
 ];
+
 const productCatalog = [
 
   {
@@ -459,43 +464,89 @@ const productCatalog = [
   }
 
 ];
+
+// ================================================================
+
+function App() {
+
 const [selectedImage, setSelectedImage] = useState(null);
 const [selectedCatalogProduct, setSelectedCatalogProduct] = useState(null);
-const [selectedPart, setSelectedPart] = useState("");
-const [customPart, setCustomPart] = useState("");
-const [selectedBrand, setSelectedBrand] = useState("Hero");
-const [vehicleModel, setVehicleModel] = useState("");
-const [emissionStandard, setEmissionStandard] = useState("BS6");
-const [chassisNumber, setChassisNumber] = useState("");
+
+// Consolidated: these 6 fields always get set/reset together, so one
+// object state + one updater means fewer re-renders than 6 separate ones.
+const [partRequest, setPartRequest] = useState({
+  selectedPart: "",
+  customPart: "",
+  selectedBrand: "Hero",
+  vehicleModel: "",
+  emissionStandard: "BS6",
+  chassisNumber: ""
+});
+
+const updatePartRequest = (fields) =>
+  setPartRequest((prev) => ({ ...prev, ...fields }));
+
+const resetPartRequest = (overrides = {}) =>
+  setPartRequest({
+    selectedPart: "",
+    customPart: "",
+    selectedBrand: "Hero",
+    vehicleModel: "",
+    emissionStandard: "BS6",
+    chassisNumber: "",
+    ...overrides
+  });
+
+const {
+  selectedPart,
+  customPart,
+  selectedBrand,
+  vehicleModel,
+  emissionStandard,
+  chassisNumber
+} = partRequest;
 
 const [partSearch, setPartSearch] = useState("");
 const [showPartSearch, setShowPartSearch] = useState(false);
 
-const partSearchResults = productCatalog.flatMap((product) =>
-  product.parts
-    .filter((part) =>
-      part.toLowerCase().includes(partSearch.toLowerCase())
-    )
-    .map((part) => ({
-      part,
-      product
-    }))
+// Shared helper — replaces the repeated document.querySelector(...).scrollIntoView(...) calls
+const scrollToSection = (id) => {
+  document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
+};
+
+// Keeps body scroll locked while EITHER the product modal or the gallery
+// lightbox is open, and always restores scrolling when both are closed.
+useEffect(() => {
+  document.body.style.overflow =
+    selectedCatalogProduct || selectedImage ? "hidden" : "";
+
+  return () => {
+    document.body.style.overflow = "";
+  };
+}, [selectedCatalogProduct, selectedImage]);
+
+const partSearchResults = useMemo(
+  () =>
+    productCatalog.flatMap((product) =>
+      product.parts
+        .filter((part) =>
+          part.toLowerCase().includes(partSearch.toLowerCase())
+        )
+        .map((part) => ({
+          part,
+          product
+        }))
+    ),
+  [partSearch]
 );
 
 const openSearchedPart = (result) => {
 
   setSelectedCatalogProduct(result.product);
-  setSelectedPart(result.part);
-  setCustomPart("");
-  setSelectedBrand("Hero");
-  setVehicleModel("");
-  setEmissionStandard("BS6");
-  setChassisNumber("");
+  resetPartRequest({ selectedPart: result.part });
 
   setPartSearch("");
   setShowPartSearch(false);
-
-  document.body.style.overflow = "hidden";
 };
 
 const openProductRequest = (requestType) => {
@@ -568,8 +619,8 @@ Thank you.`;
         </p>
 
         <div className="hero-buttons">
-            <button type="button" onClick={() => document.querySelector("#products")?.scrollIntoView({ behavior: "smooth" })}>🛒 View Products</button>
-            <button type="button" onClick={() => document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" })}>📞 Contact Us</button>
+            <button type="button" onClick={() => scrollToSection("#products")}>🛒 View Products</button>
+            <button type="button" onClick={() => scrollToSection("#contact")}>📞 Contact Us</button>
         </div>
 
         <div className="hero-features">
@@ -645,8 +696,8 @@ Thank you.`;
     </div>
 
     <div className="about-buttons">
-      <button type="button" onClick={() => document.querySelector("#products")?.scrollIntoView({ behavior: "smooth" })}>🛒 View Products</button>
-      <button type="button" onClick={() => document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" })}>📞 Contact Us</button>
+      <button type="button" onClick={() => scrollToSection("#products")}>🛒 View Products</button>
+      <button type="button" onClick={() => scrollToSection("#contact")}>📞 Contact Us</button>
     </div>
 
   </div>
@@ -762,11 +813,11 @@ Thank you.`;
 
     <div className="brands-buttons">
 
-      <button type="button" onClick={() => document.querySelector("#products")?.scrollIntoView({ behavior: "smooth" })}>
+      <button type="button" onClick={() => scrollToSection("#products")}>
         🛒 View Products
       </button>
 
-      <button type="button" onClick={() => document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" })}>
+      <button type="button" onClick={() => scrollToSection("#contact")}>
         📞 Contact Us
       </button>
 
@@ -805,129 +856,30 @@ Thank you.`;
 
   <div className="products-grid">
     {productCatalog.map((product) => (
-      <article className="product-card" key={product.name}>
-        <div className="product-icon" aria-hidden="true">{product.icon}</div>
-
-        <div className="product-content">
-          <span className="product-category">{product.category}</span>
-          <h3>{product.name}</h3>
-          <p>{product.description}</p>
-          <button
-            type="button"
-            className="product-enquiry"
-            onClick={() => {
-              setSelectedCatalogProduct(product);
-              setSelectedPart(product.parts[0]);
-              setCustomPart("");
-              setSelectedBrand("Hero");
-              setVehicleModel("");
-            }}
-          >
-            View all parts →
-          </button>
-        </div>
-
-        <div className="product-brand">HERO & HONDA · AVAILABLE ON REQUEST</div>
-      </article>
+      <ProductCard
+        key={product.name}
+        product={product}
+        onViewParts={(clickedProduct) => {
+          setSelectedCatalogProduct(clickedProduct);
+          updatePartRequest({
+            selectedPart: clickedProduct.parts[0],
+            customPart: "",
+            selectedBrand: "Hero",
+            vehicleModel: ""
+          });
+        }}
+      />
     ))}
   </div>
 
   {selectedCatalogProduct && (
-    <div className="product-modal-backdrop" role="presentation" onMouseDown={() => setSelectedCatalogProduct(null)}>
-      <section className="product-modal" role="dialog" aria-modal="true" aria-labelledby="product-modal-title" onMouseDown={(event) => event.stopPropagation()}>
-        <button type="button" className="product-modal-close" onClick={() => setSelectedCatalogProduct(null)} aria-label="Close product chooser">×</button>
-
-        <span className="product-category">{selectedCatalogProduct.category}</span>
-        <h3 id="product-modal-title">{selectedCatalogProduct.name}</h3>
-        <p>Choose the part, then select the vehicle brand and model for an accurate match.</p>
-
-        <div className="part-options" aria-label="Choose a part">
-          {selectedCatalogProduct.parts.map((part) => (
-            <button type="button" key={part} className={selectedPart === part && !customPart ? "selected" : ""} onClick={() => { setSelectedPart(part); setCustomPart(""); }}>{part}</button>
-          ))}
-        </div>
-
-        <label className="vehicle-model-label custom-part-label">
-          Can't find the part? <span>Type its name and we will source it if possible.</span>
-          <input type="text" value={customPart} onChange={(event) => setCustomPart(event.target.value)} placeholder="Example: Engine timing chain tensioner" />
-        </label>
-
-        <div className="brand-options" aria-label="Choose a company">
-          {["Hero", "Honda"].map((brand) => (
-            <button type="button" key={brand} className={selectedBrand === brand ? "selected" : ""} onClick={() => setSelectedBrand(brand)}>{brand}</button>
-          ))}
-        </div>
-
-        <label className="vehicle-model-label">
-          Vehicle model <span>(recommended)</span>
-          <input type="text" value={vehicleModel} onChange={(event) => setVehicleModel(event.target.value)} placeholder="Example: Splendor Plus / Activa 6G" />
-        </label>
-
-        
-
- <div className="vehicle-identification">
-
-  <label>
-    Vehicle Identification
-  </label>
-
-  <span>
-    Select your bike's BS version or provide the chassis number
-  </span>
-
-  <div className="emission-options">
-
-    <button
-      type="button"
-      className={emissionStandard === "BS3" ? "selected" : ""}
-      onClick={() => setEmissionStandard("BS3")}
-    >
-      BS3
-    </button>
-
-    <button
-      type="button"
-      className={emissionStandard === "BS4" ? "selected" : ""}
-      onClick={() => setEmissionStandard("BS4")}
-    >
-      BS4
-    </button>
-
-    <button
-      type="button"
-      className={emissionStandard === "BS6" ? "selected" : ""}
-      onClick={() => setEmissionStandard("BS6")}
-    >
-      BS6
-    </button>
-
-    <button
-      type="button"
-      className={emissionStandard === "Chassis No." ? "selected" : ""}
-      onClick={() => setEmissionStandard("Chassis No.")}
-    >
-      Chassis No.
-    </button>
-
-  </div>
-
-  {emissionStandard === "Chassis No." && (
-    <input
-      type="text"
-      className="chassis-input"
-      placeholder="Enter chassis number"
-      value={chassisNumber}
-      onChange={(e) => setChassisNumber(e.target.value)}
+    <ProductModal
+      product={selectedCatalogProduct}
+      partRequest={partRequest}
+      updatePartRequest={updatePartRequest}
+      onClose={() => setSelectedCatalogProduct(null)}
+      onRequest={openProductRequest}
     />
-  )}
-
-</div>
-        <div className="product-request-actions">
-          <button type="button" className="availability-button" onClick={() => openProductRequest("check availability for")}>Ask availability</button>
-          <button type="button" className="booking-button" onClick={() => openProductRequest("book")}>Book this part</button>
-        </div>
-      </section>
-    </div>
   )}
 
 
@@ -944,7 +896,7 @@ Thank you.`;
       for your Hero or Honda two-wheeler.
     </p>
 
-    <button type="button" onClick={() => document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" })}>
+    <button type="button" onClick={() => scrollToSection("#contact")}>
       📞 Contact Us
     </button>
 
@@ -975,78 +927,21 @@ Thank you.`;
 
 
   <div className="gallery-grid">
-
     {galleryImages.map((image, index) => (
-
-      <div
+      <GalleryCard
         key={index}
-        className={`gallery-card gallery-card-${index + 1}`}
-        onClick={() => setSelectedImage(image)}
-      >
-
-        <img
-          src={image.src}
-          alt={image.title}
-          loading="lazy"
-        />
-
-        <div className="gallery-overlay">
-
-          <div>
-            <span>{image.category}</span>
-            <h3>{image.title}</h3>
-          </div>
-
-          <div className="gallery-view">
-            ↗
-          </div>
-
-        </div>
-
-      </div>
-
+        image={image}
+        index={index}
+        onSelect={setSelectedImage}
+      />
     ))}
-
   </div>
 
 
   {/* IMAGE LIGHTBOX */}
 
   {selectedImage && (
-
-    <div
-      className="gallery-lightbox"
-      onClick={() => setSelectedImage(null)}
-    >
-
-      <button
-        className="gallery-close"
-        onClick={() => setSelectedImage(null)}
-        aria-label="Close image"
-      >
-        ×
-      </button>
-
-      <img
-        src={selectedImage.src}
-        alt={selectedImage.title}
-        onClick={(e) => e.stopPropagation()}
-      />
-
-      <div className="lightbox-title">
-
-        <span>
-          {selectedImage.category}
-        </span>
-
-        <h3>
-          {selectedImage.title}
-        </h3>
-
-      </div>
-
-    </div>
-
+    <GalleryLightbox image={selectedImage} onClose={() => setSelectedImage(null)} />
   )}
 
 </section>
